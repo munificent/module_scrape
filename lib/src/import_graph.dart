@@ -41,6 +41,9 @@ class ImportGraph {
 
   final Map<String, GraphNode> libraries = {};
 
+  /// Libraries that appeared in imports but weren't on disk.
+  final Set<String> missing = {};
+
   ImportGraph._(this._packageName);
 
   void _addLibrary(String library) {

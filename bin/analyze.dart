@@ -17,6 +17,7 @@ final publicLibs = Histogram();
 final srcLibs = Histogram();
 final testLibs = Histogram();
 final otherLibs = Histogram();
+final missingLibs = Histogram();
 final componentCount = Histogram();
 final multiLibComponentCount = Histogram();
 final componentSizes = Histogram();
@@ -76,6 +77,9 @@ void main(List<String> arguments) {
       componentSizes.add(component.length);
     }
 
+    // Note: missing is only populated after calling connectedComponents().
+    missingLibs.add(graph.missing.length);
+
     var multiLibraryComponents =
         components.where((component) => component.length > 1).toList();
     multiLibComponentCount.add(multiLibraryComponents.length);
@@ -90,6 +94,7 @@ void main(List<String> arguments) {
   srcLibs.printCounts('Private lib/src/ libraries');
   testLibs.printCounts('Test test/ libraries');
   otherLibs.printCounts('Other libraries');
+  missingLibs.printCounts('Missing libraries');
   componentCount.printCounts('Component count');
   componentSizes.printCounts('Component sizes');
   print('');
