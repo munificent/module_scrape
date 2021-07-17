@@ -27,6 +27,9 @@ void main(List<String> arguments) {
   }
 
   var graph = ImportGraph.read(package, path);
+  graph.dump();
+
+  print('Components:');
   var components = graph.connectedComponents();
   for (var component in components) {
     print('- ${component.join(' ')}');
@@ -63,7 +66,8 @@ void generateGraphviz(ImportGraph graph) {
       buffer.writeln('    ${viz(from)} [color=$color];');
 
       var node = graph.libraries[from];
-      var imports = node.imports.toList()..sort();
+      // TODO: Filter for different kinds of uses.
+      var imports = node.references({'import'}).toList()..sort();
       for (var to in imports) {
         buffer.writeln('    ${viz(from)} -> ${viz(to)};');
       }

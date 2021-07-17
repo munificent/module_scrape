@@ -3,16 +3,39 @@
 // BSD-style license that can be found in the LICENSE file.
 import 'dart:math' as math;
 
-/// Counts occurrences of numbers and displays the results as a histogram.
+enum SortOrder {
+  /// From fewest occurrences to most.
+  ascending,
+
+  /// From most occurrences to fewest.
+  descending,
+
+  /// Lexicographically sorted by name.
+  alphabetical,
+
+  /// Keys are parsed as integers and sorted by value.
+  numeric,
+}
+
+/// Counts occurrences of strings and displays the results as a histogram.
 class Histogram {
-  /// Keys are numbers and values are how many times that number has appeared.
-  final Map<int, int> _counts = {};
+  final Map<Object, int> _counts = {};
+  final SortOrder _order;
+  final bool _showBar;
+  final bool _showAll;
+  final int _minCount;
 
   int get totalCount => _counts.values.fold(0, (a, b) => a + b);
 
-  void add(int item) {
+  Histogram({SortOrder order, bool showBar, bool showAll, int minCount})
+      : _order = order ?? SortOrder.descending,
+        _showBar = showBar ?? true,
+        _showAll = showAll ?? false,
+        _minCount = minCount ?? 0;
+
+  void add(Object item) {
     _counts.putIfAbsent(item, () => 0);
-    _counts[item]++;
+    _counts[item] = _counts[item] + 1;
   }
 
   void printCounts(String label) {
@@ -21,48 +44,59 @@ class Histogram {
     print('-- $label ($total total) --');
 
     var keys = _counts.keys.toList();
-    keys.sort();
+    switch (_order) {
+      case SortOrder.ascending:
+        keys.sort((a, b) => _counts[a].compareTo(_counts[b]));
+        break;
+      case SortOrder.descending:
+        keys.sort((a, b) => _counts[b].compareTo(_counts[a]));
+        break;
+      case SortOrder.alphabetical:
+        keys.sort();
+        break;
+      case SortOrder.numeric:
+      // TODO(rnystrom): Using string keys but treating them as integers is
+      // kind of hokey. But it keeps the [ScrapeVisitor] API simpler.
+        keys.sort((a, b) => (a as int).compareTo(b as int));
+        break;
+    }
 
     var longest = keys.fold<int>(
         0, (length, key) => math.max(length, key.toString().length));
     var barScale = 80 - 22 - longest;
 
-    var skipped = 0;
     for (var object in keys) {
       var count = _counts[object];
       var countString = count.toString().padLeft(7);
       var percent = 100 * count / total;
       var percentString = percent.toStringAsFixed(3).padLeft(7);
 
-      if (percent >= 1.0) {
-        var line = '$countString ($percentString%): $object';
-        if (barScale > 1) {
-          line = line.padRight(longest + 22);
-          line += '=' * (percent / 100 * barScale).ceil();
-        }
-        print(line);
-      } else {
-        skipped++;
+      var line = '$countString ($percentString%): $object';
+      if (_showBar && barScale > 1) {
+        line = line.padRight(longest + 22);
+        line += '=' * (percent / 100 * barScale).ceil();
       }
+      print(line);
     }
-
-    if (skipped > 0) print('And $skipped more...');
 
     // If we're counting numeric keys, show other statistics too.
-    var sum = keys.fold<int>(0, (result, key) => result + key * _counts[key]);
-    var average = sum / total;
+    if (_order == SortOrder.numeric && keys.isNotEmpty) {
+      var sum = keys.fold<int>(
+          0, (result, key) => result + (key as int) * _counts[key]);
+      var average = sum / total;
 
-    // Find the median key where half the total count is below it.
-    var count = 0;
-    var median = -1;
-    for (var key in keys) {
-      count += _counts[key];
-      if (count >= total ~/ 2) {
-        median = key;
-        break;
+      // Find the median key where half the total count is below it.
+      var count = 0;
+      var median = -1;
+      for (var key in keys) {
+        count += _counts[key];
+        if (count >= total ~/ 2) {
+          median = key as int;
+          break;
+        }
       }
-    }
 
-    print('Sum $sum, average ${average.toStringAsFixed(3)}, median $median');
+      print('Sum $sum, average ${average.toStringAsFixed(3)}, median $median');
+    }
   }
 }
